@@ -14,7 +14,7 @@ export default async function HomePage() {
     .from("patterns")
     .select("id, title, image_url, pixel_data")
     .eq("is_public", true)
-    .order("created_at", { ascending: false })
+    .order("view_count", { ascending: false })
     .limit(8);
   const popular = (data ?? []) as Pattern[];
 

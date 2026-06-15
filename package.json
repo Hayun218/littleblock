@@ -7,19 +7,22 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "migrate-images": "node scripts/upload-legacy.mjs"
+    "migrate-images": "node scripts/upload-legacy.mjs",
+    "create-defaults": "node scripts/create-default-patterns.mjs"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.47.10",
     "next": "15.1.11",
     "react": "19.0.3",
-    "react-dom": "19.0.3",
-    "@supabase/supabase-js": "^2.47.10",
-    "@supabase/ssr": "^0.5.2"
+    "react-dom": "19.0.3"
   },
   "devDependencies": {
-    "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "^19",
-    "@types/react-dom": "^19"
+    "@types/react-dom": "^19",
+    "axios": "^1.18.0",
+    "sharp": "^0.35.1",
+    "typescript": "^5"
   }
 }

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase-server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { BeadUnit } from "@/components/BeadPattern";
+import ViewCounter from "./view-counter";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export default async function GalleryDetailPage({ params }: { params: Promise<{ 
   const supabase = await createClient();
   const { data: p } = await supabase
     .from("patterns")
-    .select("id, title, image_url, created_at, pixel_data, is_public, profiles(nickname)")
+    .select("id, title, image_url, created_at, pixel_data, is_public, view_count, profiles(nickname)")
     .eq("id", id)
     .single();
 
@@ -23,6 +24,7 @@ export default async function GalleryDetailPage({ params }: { params: Promise<{ 
   const pixelData = p.pixel_data as PixelData | null;
   const profilesRaw = p.profiles as unknown;
   const nickname = (Array.isArray(profilesRaw) ? profilesRaw[0] : profilesRaw as { nickname: string | null } | null)?.nickname ?? null;
+  const viewCount = (p.view_count as number) || 0;
 
   return (
     <>
@@ -32,8 +34,9 @@ export default async function GalleryDetailPage({ params }: { params: Promise<{ 
 
         <h1 style={{ fontSize: 28, fontWeight: 800, margin: "16px 0 6px" }}>{p.title}</h1>
         <div style={{ color: "var(--muted)", fontSize: 14, marginBottom: 28 }}>
-          by {nickname ?? "Unknown"}
+          by {nickname ?? "Unknown"} · 조회수 {viewCount}
         </div>
+        <ViewCounter patternId={id} />
 
         <div style={{ display: "flex", gap: 48, alignItems: "flex-start", flexWrap: "wrap" }}>
           {/* 디폼블럭 도안 미리보기 */}
