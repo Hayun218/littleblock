@@ -1,9 +1,10 @@
-// src/app/mypage/page.tsx — 마이페이지 (계정정보 + 내 도안)
+// src/app/mypage/page.tsx — 마이페이지 (계정정보 + 내 도안 + 관리자 기능)
 import { redirect } from "next/navigation";
 import Header from "@/components/Header";
 import { createClient } from "@/lib/supabase-server";
 import MineList from "@/components/MineList";
 import AccountSection from "@/components/AccountSection";
+import AdminSection from "@/components/AdminSection";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +19,10 @@ export default async function MyPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/mypage");
 
-  // 프로필
+  // 프로필 (is_admin 추가)
   const { data: profile } = await supabase
     .from("profiles")
-    .select("nickname")
+    .select("nickname, is_admin")
     .eq("id", user.id)
     .single();
 
@@ -63,6 +64,11 @@ export default async function MyPage({
             내 도안
             <span style={S.badge}>{list.length}</span>
           </a>
+          {profile?.is_admin && (
+            <a href="/mypage?tab=admin" style={{ ...S.tab, ...(tab === "admin" ? S.tabActive : {}), color: "var(--accent)" }}>
+              👑 관리자
+            </a>
+          )}
         </div>
 
         {/* 탭 내용 */}
@@ -71,13 +77,10 @@ export default async function MyPage({
             email={user.email ?? ""}
             initialNickname={profile?.nickname ?? ""}
           />
+        ) : tab === "admin" && profile?.is_admin ? (
+          <AdminSection userId={user.id} />
         ) : (
-          <div>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
-              <a href="/editor" style={S.newBtn}>+ 새로 만들기</a>
-            </div>
-            <MineList initial={list} />
-          </div>
+          <MineList initial={list} />
         )}
       </main>
     </>

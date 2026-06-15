@@ -1,10 +1,12 @@
 // src/app/gallery/page.tsx — 작품 갤러리 (공개 도안, 디폼블럭 스타일)
 import Header from "@/components/Header";
 import { createClient } from "@/lib/supabase-server";
+import { BeadUnit } from "@/components/BeadPattern";
 import GalleryContent from "./gallery-content";
 
 export const dynamic = "force-dynamic";
 
+type PixelData = { cols: number; rows: number; data: (string | null)[] };
 type Pattern = {
   id: string;
   title: string;
@@ -20,10 +22,24 @@ export default async function GalleryPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("patterns")
-    .select("id, title, image_url, created_at, view_count, pixel_data, profiles(nickname)")
+    .select("id, title, image_url, created_at, view_count, pixel_data, user_id")
     .eq("is_public", true)
     .limit(120);
-  const list = (data ?? []) as Pattern[];
+
+  // 각 도안의 user_id로 닉네임 조회
+  const list = await Promise.all(
+    (data ?? []).map(async (p) => {
+      if (p.user_id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("nickname")
+          .eq("id", p.user_id)
+          .single();
+        return { ...p, profiles: profile };
+      }
+      return { ...p, profiles: { nickname: "unknown" } };
+    })
+  ) as Pattern[];
 
   return (
     <>

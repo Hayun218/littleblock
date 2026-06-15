@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "migrate-images": "node scripts/upload-legacy.mjs",
-    "create-defaults": "node scripts/create-default-patterns.mjs"
+    "create-defaults": "node scripts/create-default-patterns.mjs",
+    "migrate-storage": "node scripts/migrate-pattern-storage.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
@@ -22,6 +23,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "axios": "^1.18.0",
+    "dotenv": "^17.4.2",
     "sharp": "^0.35.1",
     "typescript": "^5"
   }

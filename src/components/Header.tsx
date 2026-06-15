@@ -6,10 +6,17 @@ import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 
-const NAV = [
-  { href: "/", label: "홈" },
-  { href: "/gallery", label: "작품" },
+type NavItem = {
+  href: string;
+  label: string;
+  external?: boolean;
+  primary?: boolean;
+};
+
+const NAV: NavItem[] = [
   { href: "/about", label: "리틀블럭 소개" },
+  { href: "/gallery", label: "작품" },
+  { href: "https://sharelifeship.netlify.app/", label: "레이스 게임", external: true },
   { href: "/contact", label: "문의하기" },
 ];
 
@@ -36,13 +43,26 @@ export default function Header() {
 
   return (
     <header style={S.header}>
-      <a href="/" style={S.brand}>리틀블럭</a>
+      <a href="/" style={S.brand}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/lego-icon.png" alt="리틀블럭" style={S.brandLogo} />
+        <span>리틀블럭</span>
+      </a>
 
       <nav style={S.centerNav}>
         {NAV.map((n) => {
-          const active = n.href === "/" ? pathname === "/" : pathname.startsWith(n.href);
+          const active = !n.external && pathname.startsWith(n.href);
           return (
-            <a key={n.href} href={n.href} style={{ ...S.navLink, ...(active ? S.navActive : {}) }}>
+            <a
+              key={n.href}
+              href={n.href}
+              target={n.external ? "_blank" : undefined}
+              rel={n.external ? "noopener noreferrer" : undefined}
+              style={{
+                ...S.navLink,
+                ...(active ? S.navActive : {}),
+              }}
+            >
               {n.label}
             </a>
           );
@@ -51,12 +71,12 @@ export default function Header() {
 
       {/* 우측 영역 — 고정 너비로 레이아웃 점프 방지 */}
       <div style={S.right}>
+        <a href="/editor" style={S.primary}>도안 만들기</a>
         {user === undefined ? (
           // 로딩 중: 같은 크기의 투명 플레이스홀더
           <div style={S.placeholder} aria-hidden />
         ) : user ? (
           <>
-            <a href="/editor" style={S.primary}>도안 만들기</a>
             <span style={S.sep} />
             <a href="/mypage" style={{
               ...S.navLink,
@@ -66,7 +86,6 @@ export default function Header() {
           </>
         ) : (
           <>
-            <a href="/editor" style={S.primary}>도안 만들기</a>
             <span style={S.sep} />
             <a href="/login" style={S.navLink}>로그인</a>
           </>
@@ -86,18 +105,23 @@ const S: Record<string, React.CSSProperties> = {
     backdropFilter: "blur(10px)",
     zIndex: 20, gap: 24,
   },
-  brand: { fontSize: 21, fontWeight: 800, letterSpacing: -0.5, flexShrink: 0, color: "var(--ink)" },
-  centerNav: { display: "flex", gap: 28, flex: 1, justifyContent: "center" },
+  brand: {
+    display: "flex", alignItems: "center", gap: 10, flexShrink: 0,
+    fontSize: 21, fontWeight: 800, letterSpacing: -0.5, color: "var(--ink)",
+    marginRight: 48,
+  },
+  brandLogo: { width: 28, height: 28, display: "block" },
+  centerNav: { display: "flex", gap: 28, flexShrink: 0 },
   navLink: { fontSize: 15, color: "var(--ink)", fontWeight: 500 },
   navActive: { color: "var(--accent)", fontWeight: 700 },
   right: {
     display: "flex", alignItems: "center", gap: 12,
     flexShrink: 0,
-    // 로그인/비로그인 모두 비슷한 너비가 되도록 minWidth 확보
-    minWidth: 260,
+    marginLeft: "auto",
+    minWidth: 240,
     justifyContent: "flex-end",
   },
-  placeholder: { width: 240, height: 36 },
+  placeholder: { width: 200, height: 36 },
   primary: {
     fontSize: 14, fontWeight: 700, color: "#fff",
     background: "var(--accent)",

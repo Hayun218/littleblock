@@ -5,7 +5,7 @@ export default function AboutPage() {
   return (
     <>
       <Header />
-      <main style={{ maxWidth: 760, margin: "0 auto", padding: "64px 40px" }}>
+      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "64px 40px" }}>
         <span style={{ color: "var(--accent)", fontWeight: 700 }}>About</span>
         <h1 style={{ fontSize: 34, fontWeight: 800, margin: "10px 0 24px", letterSpacing: -0.5 }}>
           상상을 현실로 만드는<br />블록 콘텐츠 브랜드

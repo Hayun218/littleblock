@@ -15,15 +15,24 @@ export default async function GalleryDetailPage({ params }: { params: Promise<{ 
   const supabase = await createClient();
   const { data: p } = await supabase
     .from("patterns")
-    .select("id, title, image_url, created_at, pixel_data, is_public, view_count, profiles(nickname)")
+    .select("id, title, image_url, created_at, pixel_data, is_public, view_count, user_id")
     .eq("id", id)
     .single();
 
   if (!p || !p.is_public) notFound();
 
+  // user_id로 프로필 정보 조회
+  let nickname = "Unknown";
+  if (p.user_id) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("nickname")
+      .eq("id", p.user_id)
+      .single();
+    nickname = profile?.nickname ?? "Unknown";
+  }
+
   const pixelData = p.pixel_data as PixelData | null;
-  const profilesRaw = p.profiles as unknown;
-  const nickname = (Array.isArray(profilesRaw) ? profilesRaw[0] : profilesRaw as { nickname: string | null } | null)?.nickname ?? null;
   const viewCount = (p.view_count as number) || 0;
 
   return (
