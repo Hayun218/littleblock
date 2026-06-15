@@ -1,0 +1,25 @@
+{
+  "name": "littleblock-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "migrate-images": "node scripts/upload-legacy.mjs"
+  },
+  "dependencies": {
+    "next": "15.1.11",
+    "react": "19.0.3",
+    "react-dom": "19.0.3",
+    "@supabase/supabase-js": "^2.47.10",
+    "@supabase/ssr": "^0.5.2"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19"
+  }
+}

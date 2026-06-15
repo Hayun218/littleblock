@@ -1,0 +1,24 @@
+/* src/app/globals.css */
+:root {
+  --ink: #1f2430;
+  --muted: #8a909c;
+  --line: #e3e6ec;
+  --line-soft: #eef0f4;
+  --accent: #ff6b6b;
+  --accent-soft: #ffe0e0;
+  --accent-ink: #b23b3b;
+  --bg: #ffffff;
+  --bg-soft: #fafbfc;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+input { font-family: inherit; }
