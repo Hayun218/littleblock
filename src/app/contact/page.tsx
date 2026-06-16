@@ -5,6 +5,8 @@ import { useState } from "react";
 import Header from "@/components/Header";
 import { createClient } from "@/lib/supabase-browser";
 
+export const dynamic = "force-dynamic";
+
 export default function ContactPage() {
   const supabase = createClient();
   const [name, setName] = useState("");

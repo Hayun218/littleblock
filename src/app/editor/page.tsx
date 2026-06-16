@@ -2,6 +2,8 @@
 import { Suspense } from "react";
 import PixelEditor from "@/components/PixelEditor";
 
+export const dynamic = "force-dynamic";
+
 export default function EditorPage() {
   return (
     <Suspense fallback={<div style={{ padding: 60, textAlign: "center", color: "#8a909c" }}>불러오는 중…</div>}>

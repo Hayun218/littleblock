@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import Header from "@/components/Header";
 
+export const dynamic = "force-dynamic";
+
 type Mode = "login" | "signup" | "forgot";
 
 function LoginForm() {

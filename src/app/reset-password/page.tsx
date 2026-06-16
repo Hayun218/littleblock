@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import Header from "@/components/Header";
 
+export const dynamic = "force-dynamic";
+
 type Step = "loading" | "form" | "done" | "error";
 
 export default function ResetPasswordPage() {
