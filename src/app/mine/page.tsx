@@ -22,10 +22,7 @@ export default async function MinePage() {
     <>
       <Header />
       <main style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 32px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 28 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>내 도안</h1>
-          <a href="/editor" style={{ background: "var(--accent)", color: "#fff", padding: "10px 18px", borderRadius: 999, fontWeight: 700, fontSize: 15 }}>새로 만들기</a>
-        </div>
+        <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 28px" }}>내 도안</h1>
         <MineList initial={list} />
       </main>
     </>

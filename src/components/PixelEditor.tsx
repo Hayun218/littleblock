@@ -30,7 +30,7 @@ export default function PixelEditor() {
   const [cols, setCols] = useState(22);
   const [rows, setRows] = useState(22);
   const [cell, setCell] = useState(24);
-  const [tool, setTool] = useState<"draw" | "erase">("draw");
+  const [tool, setTool] = useState<"draw" | "erase" | "select">("draw");
   const [current, setCurrent] = useState(PALETTE[0]);
   const [data, setData] = useState<Cell[]>(() => Array(22 * 22).fill(null));
   const [saving, setSaving] = useState(false);
@@ -40,6 +40,10 @@ export default function PixelEditor() {
   const [isPublic, setIsPublic] = useState(false);
   const [oldImagePath, setOldImagePath] = useState<string | null>(null);
   const [notEditable, setNotEditable] = useState(false);
+  const [clipboard, setClipboard] = useState<Cell[] | null>(null);
+  const [expandDir, setExpandDir] = useState<"left" | "right" | "top" | "bottom">("right");
+  const [selection, setSelection] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [clipboardRegion, setClipboardRegion] = useState<{ width: number; height: number; data: Cell[] } | null>(null);
   const painting = useRef(false);
   const pendingImageRef = useRef<{ src: Uint8ClampedArray; w: number; h: number } | null>(null);
 
@@ -94,17 +98,58 @@ export default function PixelEditor() {
     })();
   }, [editId, supabase, router]);
 
-  // Ctrl+Z 단축키
+  // Delete/Backspace 선택 영역 삭제
+  const deleteSelection = useCallback(() => {
+    if (notEditable || !selection) return;
+    const { x1, y1, x2, y2 } = selection;
+    const minX = Math.min(x1, x2);
+    const maxX = Math.max(x1, x2);
+    const minY = Math.min(y1, y2);
+    const maxY = Math.max(y1, y2);
+
+    pushHistory(data);
+    const newData = [...data];
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        newData[y * cols + x] = null;
+      }
+    }
+    setData(newData);
+    setSelection(null);
+  }, [notEditable, selection, cols, data, pushHistory]);
+
+  // 도구 변경 시 선택 표시 초기화
+  useEffect(() => {
+    if (tool !== "select") {
+      setSelection(null);
+    }
+  }, [tool]);
+
+  // Ctrl+Z/C/V, Delete 단축키
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+      if ((e.ctrlKey || e.metaKey)) {
+        if (e.key === "z" && !e.shiftKey) {
+          e.preventDefault();
+          undo();
+        } else if (e.key === "c" && tool === "select" && selection) {
+          e.preventDefault();
+          copySelection();
+        } else if (e.key === "v" && clipboardRegion) {
+          e.preventDefault();
+          // 선택 영역 시작점에 붙여넣기 또는 화면 중앙
+          const pasteX = selection ? Math.min(selection.x1, selection.x2) : Math.floor(cols / 2);
+          const pasteY = selection ? Math.min(selection.y1, selection.y2) : Math.floor(rows / 2);
+          pasteSelection(pasteX, pasteY);
+        }
+      } else if ((e.key === "Delete" || e.key === "Backspace") && selection) {
         e.preventDefault();
-        undo();
+        deleteSelection();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [undo]);
+  }, [undo, tool, selection, clipboardRegion, cols, rows, notEditable, data, deleteSelection]);
 
   const paintAt = useCallback((i: number, saveHistory = false) => {
     if (notEditable) return;
@@ -153,18 +198,71 @@ export default function PixelEditor() {
     return cv;
   }, [cols, rows, data]);
 
-  const resize = (nc: number, nr: number) => {
+  const resize = (nc: number, nr: number, direction: "top" | "bottom" | "left" | "right" = "right") => {
     if (notEditable) return;
-    nc = Math.max(4, Math.min(60, nc || 22));
-    nr = Math.max(4, Math.min(60, nr || 22));
+    nc = Math.max(4, Math.min(60, nc || cols));
+    nr = Math.max(4, Math.min(60, nr || rows));
+
+    pushHistory(data);
+
     setData((prev) => {
       const n: Cell[] = Array(nc * nr).fill(null);
-      for (let y = 0; y < Math.min(nr, rows); y++)
-        for (let x = 0; x < Math.min(nc, cols); x++)
-          n[y * nc + x] = prev[y * cols + x];
+
+      let offsetX = 0, offsetY = 0;
+      if (direction === "left") offsetX = nc - cols;
+      if (direction === "top") offsetY = nr - rows;
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const nx = x + offsetX;
+          const ny = y + offsetY;
+          if (nx >= 0 && nx < nc && ny >= 0 && ny < nr) {
+            n[ny * nc + nx] = prev[y * cols + x];
+          }
+        }
+      }
       return n;
     });
     setCols(nc); setRows(nr);
+  };
+
+  const copySelection = () => {
+    if (notEditable || !selection) return;
+    const { x1, y1, x2, y2 } = selection;
+    const minX = Math.min(x1, x2);
+    const maxX = Math.max(x1, x2);
+    const minY = Math.min(y1, y2);
+    const maxY = Math.max(y1, y2);
+    const w = maxX - minX + 1;
+    const h = maxY - minY + 1;
+
+    const clipData: Cell[] = [];
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        clipData.push(data[y * cols + x]);
+      }
+    }
+    setClipboardRegion({ width: w, height: h, data: clipData });
+    setSelection(null);
+  };
+
+  const pasteSelection = (pasteX: number, pasteY: number) => {
+    if (notEditable || !clipboardRegion) return;
+    pushHistory(data);
+    const newData = [...data];
+    const { width: w, height: h, data: clipData } = clipboardRegion;
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const px = pasteX + x;
+        const py = pasteY + y;
+        if (px >= 0 && px < cols && py >= 0 && py < rows) {
+          newData[py * cols + px] = clipData[y * w + x];
+        }
+      }
+    }
+    setData(newData);
+    setTool("draw");
   };
 
   const clearAll = () => {
@@ -572,6 +670,7 @@ export default function PixelEditor() {
         <aside style={S.side}>
           <button style={tool === "draw" ? S.toolOn : S.tool} onClick={() => setTool("draw")} disabled={notEditable}>✏️ 그리기</button>
           <button style={tool === "erase" ? S.toolOn : S.tool} onClick={() => setTool("erase")} disabled={notEditable}>🧽 지우기</button>
+          <button style={tool === "select" ? S.toolOn : S.tool} onClick={() => setTool("select")} disabled={notEditable} title="드래그로 영역 선택 후 Ctrl+C 복사, Ctrl+V 붙여넣기">⬜ 선택</button>
           <label style={{ ...S.tool, opacity: notEditable ? 0.4 : 1 }}>🖼️ 이미지 불러오기
             <input type="file" accept="image/*" onChange={onImage} style={{ display: "none" }} disabled={notEditable} />
           </label>
@@ -585,15 +684,59 @@ export default function PixelEditor() {
           ) : (
             <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line-soft)" }}>
               <div style={S.sLbl}>블록 크기</div>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <input type="number" value={cols} min={4} max={60}
-                  onChange={(e) => resize(+e.target.value, rows)} style={S.num} /> ×
-                <input type="number" value={rows} min={4} max={60}
-                  onChange={(e) => resize(cols, +e.target.value)} style={S.num} />
+
+              {/* 스테퍼 UI */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+                {/* 행 */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, minWidth: 24 }}>행</span>
+                  <button onClick={() => resize(cols, rows - 1, expandDir)} disabled={rows <= 4} style={S.stepperBtn}>−</button>
+                  <div style={{ fontSize: 14, fontWeight: 600, minWidth: 40, textAlign: "center" }}>{rows}</div>
+                  <button onClick={() => resize(cols, rows + 1, expandDir)} style={S.stepperBtn}>+</button>
+                </div>
+
+                {/* 열 */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, minWidth: 24 }}>열</span>
+                  <button onClick={() => resize(cols - 1, rows, expandDir)} disabled={cols <= 4} style={S.stepperBtn}>−</button>
+                  <div style={{ fontSize: 14, fontWeight: 600, minWidth: 40, textAlign: "center" }}>{cols}</div>
+                  <button onClick={() => resize(cols + 1, rows, expandDir)} style={S.stepperBtn}>+</button>
+                </div>
               </div>
+
+              {/* 방향 선택 */}
+              <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: "1px solid var(--line-soft)" }}>
+                <div style={S.sLbl}>적용 방향</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  <button onClick={() => setExpandDir("left")} style={{...S.directionBtn, background: expandDir === "left" ? "var(--accent)" : "#fff", color: expandDir === "left" ? "#fff" : "var(--ink)"}} title="좌측에서 확장">← 좌측</button>
+                  <button onClick={() => setExpandDir("right")} style={{...S.directionBtn, background: expandDir === "right" ? "var(--accent)" : "#fff", color: expandDir === "right" ? "#fff" : "var(--ink)"}} title="우측에서 확장">우측 →</button>
+                  <button onClick={() => setExpandDir("top")} style={{...S.directionBtn, background: expandDir === "top" ? "var(--accent)" : "#fff", color: expandDir === "top" ? "#fff" : "var(--ink)"}} title="위에서 확장">↑ 위</button>
+                  <button onClick={() => setExpandDir("bottom")} style={{...S.directionBtn, background: expandDir === "bottom" ? "var(--accent)" : "#fff", color: expandDir === "bottom" ? "#fff" : "var(--ink)"}} title="아래에서 확장">아래 ↓</button>
+                </div>
+              </div>
+
               <div style={S.sLbl}>셀 크기</div>
-              <input type="range" min={14} max={36} value={cell}
-                onChange={(e) => setCell(+e.target.value)} style={{ width: "100%" }} />
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input type="range" min={8} max={60} value={cell}
+                  onChange={(e) => setCell(+e.target.value)} style={{ flex: 1 }} />
+                <input type="number" min={8} max={60} value={cell}
+                  onChange={(e) => {
+                    let val = +e.target.value;
+                    val = Math.max(8, Math.min(60, val));
+                    setCell(val);
+                  }} style={{...S.num, width: 50}} />
+              </div>
+
+              {/* 선택 도구 단축키 안내 */}
+              {(selection || clipboardRegion) && (
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line-soft)", fontSize: 12, color: "var(--muted)" }}>
+                  <div style={S.sLbl}>단축키</div>
+                  <div style={{ lineHeight: 1.6 }}>
+                    {selection && <>Ctrl+C: 복사<br /></>}
+                    {clipboardRegion && <>Ctrl+V: 붙여넣기<br /></>}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </aside>
@@ -613,24 +756,58 @@ export default function PixelEditor() {
             }}
               onPointerDown={(e) => {
                 const t = e.target as HTMLElement;
-                if (t.dataset.i) { painting.current = true; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); paintAt(+t.dataset.i, true); }
+                if (!t.dataset.i) return;
+                painting.current = true;
+                (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                const idx = +t.dataset.i;
+                const x = idx % cols;
+                const y = Math.floor(idx / cols);
+
+                if (tool === "select") {
+                  setSelection({ x1: x, y1: y, x2: x, y2: y });
+                } else {
+                  paintAt(idx, true);
+                }
               }}
               onPointerMove={(e) => {
                 if (!painting.current) return;
                 const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement;
-                if (el?.dataset.i) paintAt(+el.dataset.i);
+                if (!el?.dataset.i) return;
+                const idx = +el.dataset.i;
+                const x = idx % cols;
+                const y = Math.floor(idx / cols);
+
+                if (tool === "select") {
+                  setSelection((prev) => prev ? { ...prev, x2: x, y2: y } : null);
+                } else {
+                  paintAt(idx);
+                }
               }}
-              onPointerUp={() => (painting.current = false)}
+              onPointerUp={() => {
+                painting.current = false;
+              }}
             >
-              {data.map((v, i) => (
-                <div key={i} data-i={i} style={{
-                  width: cell,
-                  height: cell,
-                  borderRight: "1px solid #d0d4dc",
-                  borderBottom: "1px solid #d0d4dc",
-                  background: v ?? "#fff",
-                }} />
-              ))}
+              {data.map((v, i) => {
+                const x = i % cols;
+                const y = Math.floor(i / cols);
+                const isSelected = selection &&
+                  x >= Math.min(selection.x1, selection.x2) &&
+                  x <= Math.max(selection.x1, selection.x2) &&
+                  y >= Math.min(selection.y1, selection.y2) &&
+                  y <= Math.max(selection.y1, selection.y2);
+
+                return (
+                  <div key={i} data-i={i} style={{
+                    width: cell,
+                    height: cell,
+                    borderRight: "1px solid #d0d4dc",
+                    borderBottom: "1px solid #d0d4dc",
+                    background: v ?? "#fff",
+                    boxShadow: isSelected ? "inset 0 0 0 2px var(--accent)" : "none",
+                    transition: "box-shadow 0.1s",
+                  }} />
+                );
+              })}
             </div>
           )}
         </main>
@@ -907,7 +1084,7 @@ const S: Record<string, React.CSSProperties> = {
   noteBox: { marginTop: 14, padding: 14, background: "var(--bg-soft)", borderRadius: 10, fontSize: 13, color: "var(--muted)", lineHeight: 1.6 },
   sLbl: { fontSize: 13, color: "var(--muted)", margin: "10px 0 6px", fontWeight: 600 },
   num: { width: 56, padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 8 },
-  stage: { overflow: "auto", display: "grid", placeItems: "center", background: "var(--bg-soft)", padding: 30 },
+  stage: { overflow: "auto", display: "grid", placeItems: "center", background: "var(--bg-soft)", padding: 20 },
   panel: { overflow: "auto", padding: 18, borderLeft: "1px solid var(--line-soft)" },
   curSwatch: { width: 44, height: 44, borderRadius: 10, border: "1px solid var(--line)" },
   swatches: { display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8, marginTop: 12 },
@@ -915,4 +1092,20 @@ const S: Record<string, React.CSSProperties> = {
   counts: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px 8px" },
   count: { display: "flex", alignItems: "center", gap: 7, fontSize: 14, fontWeight: 600 },
   dot: { width: 28, height: 28, borderRadius: 999, border: "1px solid var(--line)" },
+  stepperBtn: {
+    width: 32, height: 32, border: "1px solid var(--line)",
+    background: "#fff", borderRadius: 6, fontSize: 16, cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    transition: "all 0.2s", fontFamily: "inherit", fontWeight: 600,
+  },
+  directionBtn: {
+    padding: "8px 12px", border: "1px solid var(--line)",
+    background: "#fff", borderRadius: 6, fontSize: 12, fontWeight: 600,
+    cursor: "pointer", transition: "all 0.2s", fontFamily: "inherit",
+  },
+  actionBtn: {
+    flex: 1, padding: "8px 12px", border: "1px solid var(--line)",
+    background: "#fff", borderRadius: 8, fontSize: 12, fontWeight: 600,
+    cursor: "pointer", transition: "all 0.2s", fontFamily: "inherit",
+  },
 };

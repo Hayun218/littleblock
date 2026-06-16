@@ -37,9 +37,8 @@ export default async function HomePage() {
               <a href="/gallery" style={S.btnGhost}>작품 구경하기</a>
             </div>
           </div>
-          <div style={S.heroArt} aria-hidden>
-            <WoodenBlockArt />
-          </div>
+          <div style={S.heroArt} aria-hidden />
+
         </div>
       </section>
 
@@ -104,80 +103,6 @@ function DeformThumb({ pixelData }: { pixelData: PixelData }) {
   );
 }
 
-// 목블럭 캐릭터 일러스트 (코딩으로 구현)
-function WoodenBlockArt() {
-  return (
-    <svg width={320} height={220} viewBox="0 0 320 220" style={{ display: "block" }}>
-      {/* 바닥 그림자 */}
-      <ellipse cx={160} cy={210} rx={140} ry={8} fill="rgba(0,0,0,0.06)" />
-
-      {/* === 왼쪽 그룹: 초록 큰 블록 + 노랑 작은 블록 === */}
-
-      {/* 초록 큰 직육면체 */}
-      <rect x={18} y={90} width={64} height={112} rx={6} fill="#3cb55a" />
-      {/* 상단 면 */}
-      <ellipse cx={50} cy={90} rx={32} ry={8} fill="#4fd470" />
-      {/* 측면 음영 */}
-      <rect x={18} y={90} width={8} height={112} rx={3} fill="rgba(0,0,0,0.10)" />
-      {/* 눈 */}
-      <circle cx={41} cy={138} r={4} fill="#1f2430" />
-      <circle cx={59} cy={138} r={4} fill="#1f2430" />
-      <circle cx={42} cy={137} r={1.5} fill="#fff" />
-      <circle cx={60} cy={137} r={1.5} fill="#fff" />
-
-      {/* 노랑 작은 정사각 블록 */}
-      <rect x={84} y={136} width={46} height={66} rx={5} fill="#f6c81e" />
-      <ellipse cx={107} cy={136} rx={23} ry={6} fill="#fde04a" />
-      <rect x={84} y={136} width={7} height={66} rx={3} fill="rgba(0,0,0,0.09)" />
-      {/* 눈 */}
-      <circle cx={99} cy={162} r={3.5} fill="#1f2430" />
-      <circle cx={115} cy={162} r={3.5} fill="#1f2430" />
-      <circle cx={100} cy={161} r={1.2} fill="#fff" />
-      <circle cx={116} cy={161} r={1.2} fill="#fff" />
-
-      {/* === 오른쪽 그룹: 파랑 높은 기둥 + 빨강 원기둥 + 위 블록 탑 === */}
-
-      {/* 파랑 직사각 기둥 */}
-      <rect x={160} y={60} width={52} height={142} rx={5} fill="#3a8fd4" />
-      <ellipse cx={186} cy={60} rx={26} ry={6.5} fill="#5aaee8" />
-      <rect x={160} y={60} width={7} height={142} rx={3} fill="rgba(0,0,0,0.10)" />
-      {/* 눈 */}
-      <circle cx={178} cy={120} r={4} fill="#1f2430" />
-      <circle cx={194} cy={120} r={4} fill="#1f2430" />
-      <circle cx={179} cy={119} r={1.5} fill="#fff" />
-      <circle cx={195} cy={119} r={1.5} fill="#fff" />
-
-      {/* 빨강 원기둥 */}
-      <rect x={218} y={86} width={54} height={116} rx={27} fill="#e11d2a" />
-      <ellipse cx={245} cy={86} rx={27} ry={7} fill="#f54757" />
-      {/* 원기둥 측면 광택 */}
-      <rect x={218} y={86} width={10} height={116} rx={5} fill="rgba(255,255,255,0.12)" />
-      {/* 눈 */}
-      <circle cx={238} cy={136} r={4} fill="#1f2430" />
-      <circle cx={254} cy={136} r={4} fill="#1f2430" />
-      <circle cx={239} cy={135} r={1.5} fill="#fff" />
-      <circle cx={255} cy={135} r={1.5} fill="#fff" />
-
-      {/* 파랑 기둥 위 쌓인 블록들 */}
-      {/* 회색 납작 블록 */}
-      <rect x={152} y={36} width={68} height={26} rx={5} fill="#9daab8" />
-      <ellipse cx={186} cy={36} rx={34} ry={7} fill="#b5c0cc" />
-
-      {/* 노랑 납작 블록 */}
-      <rect x={162} y={14} width={56} height={24} rx={5} fill="#f6c81e" />
-      <ellipse cx={190} cy={14} rx={28} ry={6} fill="#fde04a" />
-
-      {/* 파랑 반원 */}
-      <path d="M168 14 Q190 -4 212 14 Z" fill="#3a8fd4" />
-      <ellipse cx={190} cy={14} rx={22} ry={5} fill="#5aaee8" />
-
-      {/* 빨강 납작 가로 블록 (파랑+빨강 사이에 걸친 것) */}
-      <rect x={154} y={66} width={118} height={22} rx={5} fill="#e11d2a" />
-      <ellipse cx={213} cy={66} rx={59} ry={6} fill="#f54757" />
-    </svg>
-  );
-}
-
 
 const S: Record<string, React.CSSProperties> = {
   hero: { background: "linear-gradient(180deg, #fff 0%, #fff7f5 100%)", padding: "10px 0 0" },
@@ -192,7 +117,7 @@ const S: Record<string, React.CSSProperties> = {
   heroBtns: { display: "flex", gap: 12, marginTop: 28 },
   btnPrimary: { background: "var(--accent)", color: "#fff", fontWeight: 700, fontSize: 16, padding: "13px 24px", borderRadius: 999 },
   btnGhost: { background: "#fff", color: "var(--ink)", fontWeight: 600, fontSize: 16, padding: "13px 24px", borderRadius: 999, border: "1px solid var(--line)" },
-  heroArt: { flex: "0 0 auto", padding: 28, background: "#fff", borderRadius: 24, boxShadow: "0 10px 40px rgba(20,24,33,.07)" },
+  heroArt: { flex: "0 0 auto", width: 340, height: 260, borderRadius: 24, backgroundImage: "url(/banner.jpg)", backgroundSize: "cover", backgroundPosition: "center", opacity: 0.75, boxShadow: "0 10px 40px rgba(20,24,33,.07)" },
 
   section: { maxWidth: 1100, margin: "0 auto", padding: "64px 40px" },
   sectionHead: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 28 },

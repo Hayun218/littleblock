@@ -233,10 +233,12 @@ export default function MineList({ initial }: { initial: Item[] }) {
           )}
 
           <div style={thumb}>
-            {it.image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={it.image_url} alt={it.title} style={thumbImg} />
-            )}
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", boxSizing: "border-box" }}>
+              {it.image_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={it.image_url} alt={it.title} style={thumbImg} />
+              )}
+            </div>
           </div>
           <div style={{ padding: "12px 14px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 8 }}>
@@ -289,8 +291,8 @@ export default function MineList({ initial }: { initial: Item[] }) {
   );
 }
 
-const card: React.CSSProperties = { border: "1px solid var(--line-soft)", borderRadius: 16, overflow: "hidden", background: "#fff" };
-const thumb: React.CSSProperties = { width: "100%", aspectRatio: "1", background: "var(--bg-soft)", display: "grid", placeItems: "center" };
+const card: React.CSSProperties = { border: "1px solid var(--line-soft)", borderRadius: 16, overflow: "hidden", background: "#fff", display: "flex", flexDirection: "column" };
+const thumb: React.CSSProperties = { width: "100%", paddingBottom: "100%", background: "var(--bg-soft)", position: "relative", flexShrink: 0, overflow: "hidden" };
 const thumbImg: React.CSSProperties = { width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" };
 const btnSm: React.CSSProperties = { flex: 1, padding: "8px 0", fontSize: 13, fontWeight: 600, background: "#fff", border: "1px solid var(--line)", borderRadius: 8, cursor: "pointer" };
 const btnDanger: React.CSSProperties = { padding: "8px 12px", fontSize: 13, fontWeight: 600, background: "#fff", border: "1px solid var(--line)", borderRadius: 8, color: "var(--accent-ink)", cursor: "pointer" };
