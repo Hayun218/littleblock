@@ -100,7 +100,7 @@ function PatternPreview({ pixelData }: { pixelData: PixelData }) {
 }
 
 function pixelDataToBlob(pixelData: PixelData): Promise<Blob> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const { cols, rows, data } = pixelData;
     const cellSize = 8;
     const size = cols * cellSize;
@@ -120,7 +120,10 @@ function pixelDataToBlob(pixelData: PixelData): Promise<Blob> {
       ctx.fillRect(x, y, cellSize, cellSize);
     });
 
-    canvas.toBlob(resolve, "image/png");
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("Failed to create blob"));
+    }, "image/png");
   });
 }
 
