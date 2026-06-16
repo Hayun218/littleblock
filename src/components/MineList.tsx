@@ -94,7 +94,7 @@ export default function MineList({ initial }: { initial: Item[] }) {
 
   const bulkTogglePublic = async (toPublic: boolean) => {
     if (selected.size === 0) { alert("선택된 도안이 없습니다"); return; }
-    setBusy("bulk");
+    setBusy("toggle-public");
     const selectedItems = items.filter((it) => selected.has(it.id));
     for (const it of selectedItems) {
       await supabase.from("patterns").update({ is_public: toPublic }).eq("id", it.id);
@@ -110,7 +110,7 @@ export default function MineList({ initial }: { initial: Item[] }) {
   const bulkDelete = async () => {
     if (selected.size === 0) { alert("선택된 도안이 없습니다"); return; }
     if (!confirm(`${selected.size}개 도안을 삭제할까요? 되돌릴 수 없어요.`)) return;
-    setBusy("bulk");
+    setBusy("delete");
     const selectedItems = items.filter((it) => selected.has(it.id));
     for (const it of selectedItems) {
       await supabase.from("patterns").delete().eq("id", it.id);
@@ -133,7 +133,42 @@ export default function MineList({ initial }: { initial: Item[] }) {
   }
 
   return (
-    <div>
+    <>
+      {(busy === "toggle-public" || busy === "delete") && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0, 0, 0, 0.3)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 100,
+          backdropFilter: "blur(2px)",
+        }}>
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "12px",
+          }}>
+            <div style={{
+              width: "48px",
+              height: "48px",
+              border: "3px solid var(--line)",
+              borderTop: "3px solid var(--accent)",
+              borderRadius: "50%",
+              animation: "spin 0.8s linear infinite",
+            }} />
+            <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--muted)" }}>
+              {busy === "delete" ? "삭제 중..." : "처리 중..."}
+            </span>
+          </div>
+        </div>
+      )}
+      <div>
       {/* 편집 모드 헤더 */}
       {editMode ? (
         <div style={S.editHeader}>
@@ -150,15 +185,18 @@ export default function MineList({ initial }: { initial: Item[] }) {
           </div>
 
           {selected.size > 0 && (
-            <div style={S.editActions}>
-              <button style={S.btnEdit} onClick={() => bulkTogglePublic(true)} disabled={busy === "bulk"}>
+            <div style={{...S.editActions, background: (busy === "toggle-public" || busy === "delete") ? "#f8f8f8" : undefined}}>
+              {(busy === "toggle-public" || busy === "delete") && (
+                <span style={{ fontSize: 16, color: "var(--muted)", animation: "spin 1s linear infinite" }}>⟳</span>
+              )}
+              <button style={S.btnEdit} onClick={() => bulkTogglePublic(true)} disabled={busy === "toggle-public"}>
                 공개로
               </button>
-              <button style={S.btnEdit} onClick={() => bulkTogglePublic(false)} disabled={busy === "bulk"}>
+              <button style={S.btnEdit} onClick={() => bulkTogglePublic(false)} disabled={busy === "toggle-public"}>
                 비공개로
               </button>
-              <button style={S.btnDelete} onClick={bulkDelete} disabled={busy === "bulk"}>
-                {busy === "bulk" ? "삭제 중..." : "삭제"}
+              <button style={S.btnDelete} onClick={bulkDelete} disabled={busy === "delete"}>
+                {busy === "delete" ? "삭제 중..." : "삭제"}
               </button>
             </div>
           )}
@@ -181,13 +219,14 @@ export default function MineList({ initial }: { initial: Item[] }) {
       {/* 도안 목록 */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 20, marginTop: 20 }}>
         {items.map((it) => (
-        <div key={it.id} style={{ ...card, position: "relative", opacity: editMode && !selected.has(it.id) ? 0.6 : 1, transition: "opacity 0.2s" }}>
+        <div key={it.id} style={{ ...card, position: "relative", opacity: editMode && !selected.has(it.id) ? 0.6 : 1, transition: "opacity 0.2s", cursor: editMode ? "pointer" : "default" }} onClick={() => editMode && toggleSelect(it.id)}>
           {editMode && (
-            <div style={S.checkbox}>
+            <div style={S.checkbox} onClick={(e) => e.stopPropagation()}>
               <input
                 type="checkbox"
                 checked={selected.has(it.id)}
                 onChange={() => toggleSelect(it.id)}
+                onClick={(e) => e.stopPropagation()}
                 style={{ width: 18, height: 18, cursor: "pointer" }}
               />
             </div>
@@ -231,7 +270,7 @@ export default function MineList({ initial }: { initial: Item[] }) {
             </div>
 
             {!editMode && (
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", gap: 6 }} onClick={(e) => e.stopPropagation()}>
                 <button style={btnSm} disabled={busy === it.id} onClick={() => togglePublic(it)}>
                   {it.is_public ? "비공개로" : "공개로"}
                 </button>
@@ -246,6 +285,7 @@ export default function MineList({ initial }: { initial: Item[] }) {
       ))}
       </div>
     </div>
+    </>
   );
 }
 

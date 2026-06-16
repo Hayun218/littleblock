@@ -50,7 +50,7 @@ export default function GalleryContent({ patterns }: { patterns: Pattern[] }) {
   }
 
   return (
-    <main style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 40px", display: "flex", flexDirection: "column", minHeight: "100%" }}>
+    <main style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 40px", display: "flex", flexDirection: "column", minHeight: "1400px" }}>
       <h1 style={{ fontSize: 30, fontWeight: 800, margin: "0 0 6px" }}>작품</h1>
       <p style={{ color: "var(--muted)", margin: "0 0 36px" }}>
         리틀블럭 사용자들이 만든 픽셀 도안 작품들이에요.

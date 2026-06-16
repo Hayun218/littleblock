@@ -9,7 +9,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const isHome = pathname === "/";
   const isGallery = pathname === "/gallery";
 
-  const contentMinHeight = isHome ? {} : isGallery ? { minHeight: "1270px" } : { minHeight: "100vh" };
+  const contentMinHeight = isHome ? {} : isGallery ? { flex: 1 } : { minHeight: "100vh" };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", ...(isHome ? {} : { minHeight: "100vh" }) }}>

@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 import Header from "@/components/Header";
-import { createClient } from "@/lib/supabase-browser";
 
 export default function ContactContent() {
-  const supabase = createClient();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -18,8 +16,13 @@ export default function ContactContent() {
     if (!name || !email || !message) { setErr("모든 항목을 입력해주세요."); return; }
     setSending(true);
     try {
-      const { error } = await supabase.from("inquiries").insert({ name, email, message });
-      if (error) throw error;
+      const res = await fetch("/api/contact", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, message }),
+      });
+
+      if (!res.ok) throw new Error("전송 실패");
       setDone(true);
     } catch (e: unknown) {
       const x = e as { message?: string };
