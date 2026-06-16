@@ -1,6 +1,8 @@
 // src/app/about/page.tsx — 리틀블럭 소개
 import Header from "@/components/Header";
 
+export const dynamic = "force-dynamic";
+
 export default function AboutPage() {
   return (
     <>
