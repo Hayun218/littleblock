@@ -105,12 +105,13 @@ const CONCEPTS: Record<string, string[]> = {
   ],
 };
 
-function generateRandomPattern(): (string | null)[] {
+function generateRandomPattern(palette?: string[]): (string | null)[] {
+  const targetPalette = palette || PALETTE;
   // 무작위 팔레트에서 5개 색상만 선택
   const selectedColors = [];
   const colorCount = Math.floor(Math.random() * 3) + 3; // 3~5개
-  const shuffled = [...PALETTE].sort(() => Math.random() - 0.5);
-  for (let i = 0; i < colorCount; i++) {
+  const shuffled = [...targetPalette].sort(() => Math.random() - 0.5);
+  for (let i = 0; i < Math.min(colorCount, shuffled.length); i++) {
     selectedColors.push(shuffled[i]);
   }
 
@@ -254,7 +255,7 @@ function keepLargestComponent(pixels: Uint8ClampedArray, channels: number): void
 
 export async function POST(req: NextRequest) {
   try {
-    const { concept, count } = await req.json();
+    const { concept, count, palette } = await req.json();
 
     if (!concept || typeof concept !== "string" || concept.trim().length === 0) {
       return NextResponse.json(
@@ -265,6 +266,7 @@ export async function POST(req: NextRequest) {
 
     const cnt = Math.min(Math.max(parseInt(count) || 1, 1), 10);
     const imageUrls = await getImageUrlsFromConcept(concept);
+    const usePalette = Array.isArray(palette) && palette.length > 0 ? palette : undefined;
     const patterns: Array<{ cols: number; rows: number; data: (string | null)[] }> = [];
 
     for (let i = 0; i < cnt; i++) {
@@ -297,6 +299,13 @@ export async function POST(req: NextRequest) {
 
           // 상위 5개 색상만 추출
           const topColors = extractTopColors(pixels as unknown as Uint8ClampedArray, channels, 5);
+          // 추출된 색상들을 현재 팔렛트로 매핑
+          const mappedPalette = topColors.map(color => {
+            const r = parseInt(color.slice(1, 3), 16);
+            const g = parseInt(color.slice(3, 5), 16);
+            const b = parseInt(color.slice(5, 7), 16);
+            return nearest(r, g, b, usePalette || PALETTE);
+          });
 
           const data: (string | null)[] = [];
 
@@ -311,8 +320,8 @@ export async function POST(req: NextRequest) {
               if (a < 128) {
                 data.push(null);
               } else {
-                // 추출된 상위 색상 팔레트로 변환
-                data.push(nearest(r, g, b, topColors));
+                // 현재 팔렛트로만 매핑된 색상 사용
+                data.push(nearest(r, g, b, mappedPalette));
               }
             }
           }
@@ -320,11 +329,11 @@ export async function POST(req: NextRequest) {
           patterns.push({ cols: 45, rows: 45, data });
         } catch (e) {
           console.error(`Failed to process image ${i} for "${concept}":`, e);
-          patterns.push({ cols: 45, rows: 45, data: generateRandomPattern() });
+          patterns.push({ cols: 45, rows: 45, data: generateRandomPattern(usePalette) });
         }
       } else {
         // 이미지 검색 실패 시 무작위 패턴 생성
-        patterns.push({ cols: 45, rows: 45, data: generateRandomPattern() });
+        patterns.push({ cols: 45, rows: 45, data: generateRandomPattern(usePalette) });
       }
     }
 

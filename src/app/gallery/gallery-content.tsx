@@ -50,7 +50,7 @@ export default function GalleryContent({ patterns }: { patterns: Pattern[] }) {
   }
 
   return (
-    <main style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 40px", display: "flex", flexDirection: "column", minHeight: "1400px" }}>
+    <main style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 40px", display: "flex", flexDirection: "column", minHeight: "auto" }}>
       <h1 style={{ fontSize: 30, fontWeight: 800, margin: "0 0 6px" }}>작품</h1>
       <p style={{ color: "var(--muted)", margin: "0 0 36px" }}>
         리틀블럭 사용자들이 만든 픽셀 도안 작품들이에요.
@@ -123,7 +123,7 @@ export default function GalleryContent({ patterns }: { patterns: Pattern[] }) {
             <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>
               총 {filtered.length}개의 작품
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
               {paginatedItems.map((p) => {
                 const profilesRaw = p.profiles;
                 const nickname: string | null = (Array.isArray(profilesRaw) ? profilesRaw[0] : profilesRaw)?.nickname ?? null;
@@ -171,9 +171,10 @@ export default function GalleryContent({ patterns }: { patterns: Pattern[] }) {
             alignItems: "center",
             justifyContent: "center",
             opacity: currentPage === 1 ? 0.5 : 1,
+            lineHeight: 1,
           }}
         >
-          ◄
+          ←
         </button>
 
         <div style={{ display: "flex", gap: 8 }}>
@@ -215,9 +216,10 @@ export default function GalleryContent({ patterns }: { patterns: Pattern[] }) {
             alignItems: "center",
             justifyContent: "center",
             opacity: currentPage === totalPages ? 0.5 : 1,
+            lineHeight: 1,
           }}
         >
-          ►
+          →
         </button>
       </div>
     </main>

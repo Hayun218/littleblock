@@ -47,6 +47,13 @@ export default function PixelEditor() {
   const painting = useRef(false);
   const pendingImageRef = useRef<{ src: Uint8ClampedArray; w: number; h: number } | null>(null);
 
+  // ── 변경사항 추적 ────────────────────────────────────────
+  const [isDirty, setIsDirty] = useState(false);
+  const initialDataRef = useRef<Cell[] | null>(null);
+  const initialTitleRef = useRef<string>("내 도안");
+  const initialPublicRef = useRef<boolean>(false);
+  const [showExitModal, setShowExitModal] = useState(false);
+
   // ── Undo 히스토리 ──────────────────────────────────────
   const MAX_HISTORY = 50;
   const historyRef = useRef<Cell[][]>([]);
@@ -84,12 +91,18 @@ export default function PixelEditor() {
         .single();
       if (error || !row) { alert("도안을 불러오지 못했어요."); router.push("/mine"); return; }
 
-      setTitle(row.title ?? "내 도안");
-      setIsPublic(!!row.is_public);
+      const titleVal = row.title ?? "내 도안";
+      const isPublicVal = !!row.is_public;
+
+      setTitle(titleVal);
+      setIsPublic(isPublicVal);
+      initialTitleRef.current = titleVal;
+      initialPublicRef.current = isPublicVal;
 
       const px = row.pixel_data as { cols: number; rows: number; data: Cell[] } | null;
       if (px && Array.isArray(px.data)) {
         setCols(px.cols); setRows(px.rows); setData(px.data);
+        initialDataRef.current = [...px.data];
       } else {
         setNotEditable(true);
       }
@@ -124,6 +137,27 @@ export default function PixelEditor() {
       setSelection(null);
     }
   }, [tool]);
+
+  // 로딩 완료 후 초기값 설정 (새 도안인 경우)
+  useEffect(() => {
+    if (loading || editId) return;
+    if (initialDataRef.current === null) {
+      initialDataRef.current = [...data];
+      initialTitleRef.current = title;
+      initialPublicRef.current = isPublic;
+    }
+  }, [loading, editId, data, title, isPublic]);
+
+  // 변경사항 감지
+  useEffect(() => {
+    if (loading || initialDataRef.current === null) return;
+
+    const dataChanged = JSON.stringify(data) !== JSON.stringify(initialDataRef.current);
+    const titleChanged = title !== initialTitleRef.current;
+    const publicChanged = isPublic !== initialPublicRef.current;
+
+    setIsDirty(dataChanged || titleChanged || publicChanged);
+  }, [data, title, isPublic, loading]);
 
   // Ctrl+Z/C/V, Delete 단축키
   useEffect(() => {
@@ -548,6 +582,10 @@ export default function PixelEditor() {
         if (!notEditable && oldImagePath) {
           await supabase.storage.from(BUCKET).remove([oldImagePath]).catch(() => {});
         }
+        initialDataRef.current = [...data];
+        initialTitleRef.current = inputTitle || "내 도안";
+        initialPublicRef.current = makePublic;
+        setIsDirty(false);
         alert("수정했어요!");
       } else {
         const res = await fetch("/api/patterns", {
@@ -561,6 +599,10 @@ export default function PixelEditor() {
           }),
         });
         if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        initialDataRef.current = [...data];
+        initialTitleRef.current = inputTitle || "내 도안";
+        initialPublicRef.current = makePublic;
+        setIsDirty(false);
         alert(makePublic ? "공개로 게시했어요!" : "비공개로 저장했어요!");
       }
       router.push("/mine");
@@ -579,6 +621,88 @@ export default function PixelEditor() {
     a.href = renderBeadCanvas().toDataURL("image/png");
     a.download = `${title || "littleblock"}.png`;
     a.click();
+  };
+
+  // 나가기 핸들러
+  const handleExitContinue = () => {
+    setShowExitModal(false);
+  };
+
+  const handleExitNow = () => {
+    router.push("/mine");
+  };
+
+  const handleSaveAndExit = async () => {
+    // 저장 함수와 동일하게 처리
+    const inputTitle = prompt("도안 제목을 입력하세요", title);
+    if (inputTitle === null) {
+      setShowExitModal(false);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      let newImageUrl: string | null = null;
+      let newImagePath: string | null = null;
+
+      if (!notEditable) {
+        const { data: { user: storageUser } } = await supabase.auth.getUser();
+        if (!storageUser) { alert("로그인이 필요해요."); router.push("/login"); return; }
+
+        const blob: Blob = await new Promise((res) =>
+          renderCanvas(24).toBlob((b) => res(b!), "image/png")
+        );
+        const path = `${storageUser.id}/${Date.now()}.png`;
+        const { error: upErr } = await supabase.storage.from(BUCKET)
+          .upload(path, blob, { contentType: "image/png" });
+        if (upErr) throw upErr;
+        newImagePath = path;
+        newImageUrl = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+      }
+
+      const finalTitle = inputTitle || "내 도안";
+      if (editId) {
+        const patch: Record<string, unknown> = {
+          title: finalTitle,
+          is_public: isPublic,
+        };
+        if (!notEditable) {
+          patch.pixel_data = { cols, rows, data };
+          patch.image_url = newImageUrl;
+        }
+        const res = await fetch(`/api/patterns/${editId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+
+        if (!notEditable && oldImagePath) {
+          await supabase.storage.from(BUCKET).remove([oldImagePath]).catch(() => {});
+        }
+      } else {
+        const res = await fetch("/api/patterns", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: finalTitle,
+            image_url: newImageUrl,
+            pixel_data: { cols, rows, data },
+            is_public: isPublic,
+          }),
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+      }
+
+      setShowExitModal(false);
+      router.push("/mine");
+      router.refresh();
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      alert("저장 실패: " + (err.message ?? "알 수 없는 오류"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   // 도안 영역만 인쇄
@@ -635,7 +759,18 @@ export default function PixelEditor() {
 
       <div style={S.topbar}>
         <div style={S.topLeft}>
-          <a href="/mine" style={S.backLink}>← 내 도안</a>
+          <button
+            onClick={() => {
+              if (isDirty) {
+                setShowExitModal(true);
+              } else {
+                router.push("/mine");
+              }
+            }}
+            style={{ ...S.backLink, background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "inherit" }}
+          >
+            ← 내 도안
+          </button>
           <span style={S.divider}>|</span>
           <span>{editId ? "도안 수정" : "도안 만들기"}</span>
           {notEditable && <span style={S.badge}>이미지 도안 · 그림 편집 불가</span>}
@@ -832,6 +967,14 @@ export default function PixelEditor() {
           </div>
         </section>
       </div>
+
+      <ExitModal
+        show={showExitModal}
+        onContinue={handleExitContinue}
+        onExit={handleExitNow}
+        onSaveAndExit={handleSaveAndExit}
+        isSaving={saving}
+      />
     </div>
   );
 }
@@ -1107,5 +1250,115 @@ const S: Record<string, React.CSSProperties> = {
     flex: 1, padding: "8px 12px", border: "1px solid var(--line)",
     background: "#fff", borderRadius: 8, fontSize: 12, fontWeight: 600,
     cursor: "pointer", transition: "all 0.2s", fontFamily: "inherit",
+  },
+};
+
+// ── 나가기 확인 모달 ────────────────────────────────────────
+function ExitModal({
+  show,
+  onContinue,
+  onExit,
+  onSaveAndExit,
+  isSaving,
+}: {
+  show: boolean;
+  onContinue: () => void;
+  onExit: () => void;
+  onSaveAndExit: () => void;
+  isSaving: boolean;
+}) {
+  if (!show) return null;
+
+  return (
+    <div style={SM.overlay} onClick={onContinue}>
+      <div style={SM.modal} onClick={(e) => e.stopPropagation()}>
+        <h3 style={SM.title}>저장하지 않은 변경사항이 있어요</h3>
+        <p style={SM.desc}>작업 중인 도안을 저장하시겠어요?</p>
+        <div style={SM.buttons}>
+          <button onClick={onContinue} style={SM.btnSecondary}>
+            계속 작업하기
+          </button>
+          <button onClick={onExit} style={SM.btnGhost}>
+            나가기
+          </button>
+          <button onClick={onSaveAndExit} disabled={isSaving} style={SM.btnPrimary}>
+            {isSaving ? "저장 중…" : "저장 후 이동"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const SM: Record<string, React.CSSProperties> = {
+  overlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 9999,
+  },
+  modal: {
+    background: "#fff",
+    borderRadius: 16,
+    padding: "24px 28px",
+    boxShadow: "0 20px 60px rgba(0, 0, 0, 0.15)",
+    maxWidth: 400,
+    width: "90%",
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 800,
+    margin: "0 0 8px",
+    color: "var(--ink)",
+  },
+  desc: {
+    fontSize: 14,
+    color: "var(--muted)",
+    margin: "0 0 24px",
+    lineHeight: 1.5,
+  },
+  buttons: {
+    display: "flex",
+    gap: 10,
+    flexDirection: "column",
+  },
+  btnPrimary: {
+    background: "var(--accent)",
+    color: "#fff",
+    border: "none",
+    borderRadius: 8,
+    padding: "11px 16px",
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  btnSecondary: {
+    background: "#fff",
+    color: "var(--ink)",
+    border: "1px solid var(--line)",
+    borderRadius: 8,
+    padding: "11px 16px",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  btnGhost: {
+    background: "transparent",
+    color: "var(--muted)",
+    border: "none",
+    borderRadius: 8,
+    padding: "11px 16px",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.2s",
   },
 };
