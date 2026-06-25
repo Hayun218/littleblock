@@ -851,24 +851,22 @@ export default function PixelEditor() {
                 </div>
               </div>
 
-              <div style={S.sLbl}>셀 크기</div>
+              <div style={S.sLbl}>캔버스 크기</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input type="range" min={8} max={60} value={cell}
+                <input type="range" min={8} max={60} value={cols}
                   onChange={(e) => {
-                    const newSize = +e.target.value;
-                    setCell(newSize);
-                    resize(newSize, newSize, expandDir);
+                    const newGridSize = +e.target.value;
+                    resize(newGridSize, newGridSize, expandDir);
                   }} style={{ flex: 1 }} />
-                <input type="number" min={8} max={60} value={cell}
+                <input type="number" min={8} max={60} value={cols}
                   onChange={(e) => {
                     let val = +e.target.value;
                     val = Math.max(8, Math.min(60, val));
-                    setCell(val);
                     resize(val, val, expandDir);
                   }} style={{...S.num, width: 50}} />
               </div>
               <p style={{ fontSize: 13, color: "var(--muted)", margin: "8px 0 0 0" }}>
-                한 셀의 크기는 10mm(정사각형)로 고정되며, 격자 개수가 조절됩니다.
+                한 셀은 10mm 고정, 격자 개수만 조절됩니다.
               </p>
 
               {/* 선택 도구 단축키 안내 */}
@@ -891,7 +889,7 @@ export default function PixelEditor() {
           ) : (
             <div style={{
               display: "grid",
-              gridTemplateColumns: `repeat(${cols}, ${cell}px)`,
+              gridTemplateColumns: `repeat(${cols}, ${FIXED_CELL_SIZE}px)`,
               borderTop: "1px solid #d0d4dc",
               borderLeft: "1px solid #d0d4dc",
               background: "#fff",
@@ -942,8 +940,8 @@ export default function PixelEditor() {
 
                 return (
                   <div key={i} data-i={i} style={{
-                    width: cell,
-                    height: cell,
+                    width: FIXED_CELL_SIZE,
+                    height: FIXED_CELL_SIZE,
                     borderRight: "1px solid #d0d4dc",
                     borderBottom: "1px solid #d0d4dc",
                     background: v ?? "#fff",
