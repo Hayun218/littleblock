@@ -14,6 +14,17 @@ const PALETTE = [
 type Cell = string | null;
 const BUCKET = "pattern-images";
 const FIXED_CELL_SIZE = 24;
+const MAX_GRID_FOR_FIXED_SIZE = 40;
+
+// 격자 크기에 따라 셀 크기 계산 (40 이상일 때 자동 줌아웃)
+function calculateCellSize(gridSize: number): number {
+  if (gridSize < MAX_GRID_FOR_FIXED_SIZE) {
+    return FIXED_CELL_SIZE;
+  }
+  // 40 이상일 때는 화면에 맞도록 자동 줌아웃
+  const maxAvailablePixels = 600;
+  return Math.max(8, Math.floor(maxAvailablePixels / gridSize));
+}
 
 function storagePathFromUrl(url: string | null): string | null {
   if (!url) return null;
@@ -866,7 +877,7 @@ export default function PixelEditor() {
                   }} style={{...S.num, width: 50}} />
               </div>
               <p style={{ fontSize: 13, color: "var(--muted)", margin: "8px 0 0 0" }}>
-                한 셀은 10mm 고정, 격자 개수만 조절됩니다.
+                40 이하: 한 셀 10mm 고정 | 40 초과: 자동 줌아웃
               </p>
 
               {/* 선택 도구 단축키 안내 */}
@@ -886,10 +897,12 @@ export default function PixelEditor() {
         <main style={S.stage}>
           {notEditable && oldImagePath ? (
             <div style={{ color: "var(--muted)" }}>이미지 도안은 미리보기를 지원하지 않아요.</div>
-          ) : (
+          ) : (() => {
+            const cellSize = calculateCellSize(cols);
+            return (
             <div style={{
               display: "grid",
-              gridTemplateColumns: `repeat(${cols}, ${FIXED_CELL_SIZE}px)`,
+              gridTemplateColumns: `repeat(${cols}, ${cellSize}px)`,
               borderTop: "1px solid #d0d4dc",
               borderLeft: "1px solid #d0d4dc",
               background: "#fff",
@@ -940,8 +953,8 @@ export default function PixelEditor() {
 
                 return (
                   <div key={i} data-i={i} style={{
-                    width: FIXED_CELL_SIZE,
-                    height: FIXED_CELL_SIZE,
+                    width: cellSize,
+                    height: cellSize,
                     borderRight: "1px solid #d0d4dc",
                     borderBottom: "1px solid #d0d4dc",
                     background: v ?? "#fff",
@@ -951,7 +964,8 @@ export default function PixelEditor() {
                 );
               })}
             </div>
-          )}
+            );
+          })()}
         </main>
 
         <section style={S.panel}>
