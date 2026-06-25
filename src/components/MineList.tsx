@@ -46,28 +46,48 @@ export default function MineList({ initial }: { initial: Item[] }) {
     const prev = items.find((p) => p.id === id);
     if (prev?.title === trimmed) { setEditingId(null); return; }
     setBusy(id);
-    const { error } = await supabase.from("patterns").update({ title: trimmed }).eq("id", id);
+    const res = await fetch(`/api/patterns/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: trimmed }),
+    });
     setBusy(null);
     setEditingId(null);
-    if (error) { alert("이름 변경 실패: " + error.message); return; }
+    if (!res.ok) {
+      const data = await res.json();
+      alert("이름 변경 실패: " + data.error);
+      return;
+    }
     setItems((prev) => prev.map((p) => (p.id === id ? { ...p, title: trimmed } : p)));
   };
 
   const togglePublic = async (it: Item) => {
     setBusy(it.id);
     const next = !it.is_public;
-    const { error } = await supabase.from("patterns").update({ is_public: next }).eq("id", it.id);
+    const res = await fetch(`/api/patterns/${it.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_public: next }),
+    });
     setBusy(null);
-    if (error) { alert("변경 실패: " + error.message); return; }
+    if (!res.ok) {
+      const data = await res.json();
+      alert("변경 실패: " + data.error);
+      return;
+    }
     setItems((prev) => prev.map((p) => (p.id === it.id ? { ...p, is_public: next } : p)));
   };
 
   const remove = async (it: Item) => {
     if (!confirm(`'${it.title}' 도안을 삭제할까요? 되돌릴 수 없어요.`)) return;
     setBusy(it.id);
-    const { error } = await supabase.from("patterns").delete().eq("id", it.id);
+    const res = await fetch(`/api/patterns/${it.id}`, { method: "DELETE" });
     setBusy(null);
-    if (error) { alert("삭제 실패: " + error.message); return; }
+    if (!res.ok) {
+      const { error } = await res.json();
+      alert("삭제 실패: " + error);
+      return;
+    }
     // storage 파일도 함께 삭제
     const path = storagePathFromUrl(it.image_url);
     if (path) await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
@@ -97,7 +117,11 @@ export default function MineList({ initial }: { initial: Item[] }) {
     setBusy("toggle-public");
     const selectedItems = items.filter((it) => selected.has(it.id));
     for (const it of selectedItems) {
-      await supabase.from("patterns").update({ is_public: toPublic }).eq("id", it.id);
+      await fetch(`/api/patterns/${it.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_public: toPublic }),
+      });
     }
     setBusy(null);
     setItems((prev) =>
@@ -113,9 +137,11 @@ export default function MineList({ initial }: { initial: Item[] }) {
     setBusy("delete");
     const selectedItems = items.filter((it) => selected.has(it.id));
     for (const it of selectedItems) {
-      await supabase.from("patterns").delete().eq("id", it.id);
-      const path = storagePathFromUrl(it.image_url);
-      if (path) await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
+      const res = await fetch(`/api/patterns/${it.id}`, { method: "DELETE" });
+      if (res.ok) {
+        const path = storagePathFromUrl(it.image_url);
+        if (path) await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
+      }
     }
     setBusy(null);
     setItems((prev) => prev.filter((p) => !selected.has(p.id)));

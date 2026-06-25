@@ -7,9 +7,23 @@ export const dynamic = "force-dynamic";
 
 export default async function MinePage() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <>
+        <Header />
+        <main style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 32px" }}>
+          <p>로그인이 필요해요.</p>
+        </main>
+      </>
+    );
+  }
+
   const { data } = await supabase
     .from("patterns")
     .select("id, title, image_url, is_public, pixel_data, created_at")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   const list = (data ?? []).map((p) => ({
