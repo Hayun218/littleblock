@@ -13,6 +13,7 @@ const PALETTE = [
 ];
 type Cell = string | null;
 const BUCKET = "pattern-images";
+const FIXED_CELL_SIZE = 24;
 
 function storagePathFromUrl(url: string | null): string | null {
   if (!url) return null;
@@ -29,7 +30,6 @@ export default function PixelEditor() {
 
   const [cols, setCols] = useState(22);
   const [rows, setRows] = useState(22);
-  const [cell, setCell] = useState(24);
   const [tool, setTool] = useState<"draw" | "erase" | "select">("draw");
   const [current, setCurrent] = useState(PALETTE[0]);
   const [data, setData] = useState<Cell[]>(() => Array(22 * 22).fill(null));
@@ -818,7 +818,7 @@ export default function PixelEditor() {
             </p>
           ) : (
             <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line-soft)" }}>
-              <div style={S.sLbl}>블록 크기</div>
+              <div style={S.sLbl}>캔버스 크기</div>
 
               {/* 스테퍼 UI */}
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
@@ -850,17 +850,9 @@ export default function PixelEditor() {
                 </div>
               </div>
 
-              <div style={S.sLbl}>셀 크기</div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input type="range" min={8} max={60} value={cell}
-                  onChange={(e) => setCell(+e.target.value)} style={{ flex: 1 }} />
-                <input type="number" min={8} max={60} value={cell}
-                  onChange={(e) => {
-                    let val = +e.target.value;
-                    val = Math.max(8, Math.min(60, val));
-                    setCell(val);
-                  }} style={{...S.num, width: 50}} />
-              </div>
+              <p style={{ fontSize: 13, color: "var(--muted)", margin: "8px 0 0 0" }}>
+                한 셀의 크기는 10mm(정사각형)로 고정됩니다.
+              </p>
 
               {/* 선택 도구 단축키 안내 */}
               {(selection || clipboardRegion) && (
@@ -882,7 +874,7 @@ export default function PixelEditor() {
           ) : (
             <div style={{
               display: "grid",
-              gridTemplateColumns: `repeat(${cols}, ${cell}px)`,
+              gridTemplateColumns: `repeat(${cols}, ${FIXED_CELL_SIZE}px)`,
               borderTop: "1px solid #d0d4dc",
               borderLeft: "1px solid #d0d4dc",
               background: "#fff",
@@ -933,8 +925,8 @@ export default function PixelEditor() {
 
                 return (
                   <div key={i} data-i={i} style={{
-                    width: cell,
-                    height: cell,
+                    width: FIXED_CELL_SIZE,
+                    height: FIXED_CELL_SIZE,
                     borderRight: "1px solid #d0d4dc",
                     borderBottom: "1px solid #d0d4dc",
                     background: v ?? "#fff",
