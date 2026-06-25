@@ -28,11 +28,12 @@ export default function PixelEditor() {
   const editId = params.get("id");
   const supabase = createClient();
 
-  const [cols, setCols] = useState(22);
-  const [rows, setRows] = useState(22);
+  const [cols, setCols] = useState(24);
+  const [rows, setRows] = useState(24);
+  const [cell, setCell] = useState(24);
   const [tool, setTool] = useState<"draw" | "erase" | "select">("draw");
   const [current, setCurrent] = useState(PALETTE[0]);
-  const [data, setData] = useState<Cell[]>(() => Array(22 * 22).fill(null));
+  const [data, setData] = useState<Cell[]>(() => Array(24 * 24).fill(null));
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!!editId);
 
@@ -850,8 +851,24 @@ export default function PixelEditor() {
                 </div>
               </div>
 
+              <div style={S.sLbl}>셀 크기</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input type="range" min={8} max={60} value={cell}
+                  onChange={(e) => {
+                    const newSize = +e.target.value;
+                    setCell(newSize);
+                    resize(newSize, newSize, expandDir);
+                  }} style={{ flex: 1 }} />
+                <input type="number" min={8} max={60} value={cell}
+                  onChange={(e) => {
+                    let val = +e.target.value;
+                    val = Math.max(8, Math.min(60, val));
+                    setCell(val);
+                    resize(val, val, expandDir);
+                  }} style={{...S.num, width: 50}} />
+              </div>
               <p style={{ fontSize: 13, color: "var(--muted)", margin: "8px 0 0 0" }}>
-                한 셀의 크기는 10mm(정사각형)로 고정됩니다.
+                한 셀의 크기는 10mm(정사각형)로 고정되며, 격자 개수가 조절됩니다.
               </p>
 
               {/* 선택 도구 단축키 안내 */}
@@ -874,7 +891,7 @@ export default function PixelEditor() {
           ) : (
             <div style={{
               display: "grid",
-              gridTemplateColumns: `repeat(${cols}, ${FIXED_CELL_SIZE}px)`,
+              gridTemplateColumns: `repeat(${cols}, ${cell}px)`,
               borderTop: "1px solid #d0d4dc",
               borderLeft: "1px solid #d0d4dc",
               background: "#fff",
@@ -925,8 +942,8 @@ export default function PixelEditor() {
 
                 return (
                   <div key={i} data-i={i} style={{
-                    width: FIXED_CELL_SIZE,
-                    height: FIXED_CELL_SIZE,
+                    width: cell,
+                    height: cell,
                     borderRight: "1px solid #d0d4dc",
                     borderBottom: "1px solid #d0d4dc",
                     background: v ?? "#fff",
